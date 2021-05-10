@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mirphys", "mirphys\mirphys.csproj", "{84065DF1-D99A-4292-9BA2-6BCC85F95F09}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "samples", "samples\samples.csproj", "{2FB6820F-66FD-49CA-AAD6-163FA7DBAFBF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{84065DF1-D99A-4292-9BA2-6BCC85F95F09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84065DF1-D99A-4292-9BA2-6BCC85F95F09}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84065DF1-D99A-4292-9BA2-6BCC85F95F09}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84065DF1-D99A-4292-9BA2-6BCC85F95F09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2FB6820F-66FD-49CA-AAD6-163FA7DBAFBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2FB6820F-66FD-49CA-AAD6-163FA7DBAFBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2FB6820F-66FD-49CA-AAD6-163FA7DBAFBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2FB6820F-66FD-49CA-AAD6-163FA7DBAFBF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
