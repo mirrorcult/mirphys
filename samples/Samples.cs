@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using ImGuiNET;
 using Veldrid;
-using Veldrid.OpenGLBinding;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
-using static Veldrid.ImGuiRenderer;
 
 namespace samples
 {
