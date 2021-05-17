@@ -88,7 +88,7 @@ namespace samples
         {
             if (ImGui.BeginMainMenuBar())
             {
-                if (ImGui.BeginMenu("Examples"))
+                if (ImGui.BeginMenu("Demos"))
                 {
                     foreach (IDemo demo in _demos)
                     {

@@ -1,9 +1,6 @@
-﻿using System;
-using static samples.Helpers;
-
-namespace samples
+﻿namespace samples
 {
-    public class Demo1 : IDemo
+    public class DemoSingleBox : IDemo
     {
         public string Name => "Single Box";
         public string Desc => "Just a box, sitting there, menacingly.";
