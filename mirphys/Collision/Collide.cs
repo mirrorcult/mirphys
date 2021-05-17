@@ -49,12 +49,13 @@ namespace mirphys
             fp.e.outEdge1 = temp2;
         }
 
+        // todo AABB collisions + circle collisions
         public static List<Contact> AABBAABB()
         {
             return new List<Contact>();
         }
 
-        public static List<Contact> RectRect()
+        public static List<Contact> RectRect(RectBody b1, RectBody b2)
         {
             return new List<Contact>();
         }

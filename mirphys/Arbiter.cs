@@ -33,6 +33,15 @@ namespace mirphys
         // combined friction
         public double Friction;
 
+        public Arbiter(Body b1, Body b2)
+        {
+            Body1 = b1;
+            Body2 = b2;
+            // temp
+            Contacts = Collide.RectRect((RectBody)Body1, (RectBody)Body2);
+            Friction = Math.Sqrt(Body1.Friction * Body2.Friction);
+        }
+
         public void Update(List<Contact> contacts)
         {
             
