@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using ImGuiNET;
+using mirphys;
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
+using Veldrid.SPIRV;
 
 namespace samples
 {
@@ -13,13 +16,47 @@ namespace samples
         private static GraphicsDevice _gd;
         private static CommandList _cl;
         private static ImGuiRenderer _ir;
-        
-        private static float tickTime = 1.0f / 60.0f;
-        private static List<IDemo> _demos = new();
+        private static DeviceBuffer _vBuff;
+        private static DeviceBuffer _iBuff;
+        private static Shader[] _shaders;
+        private static Pipeline _pipeline;
 
+        private static List<IDemo> _demos = new();
         private static IDemo _currentDemo;
-        
+
+        private static World World = new(new(0, mirphys.Constants.NormalGravity), 3);
+        private static float tickTime = 1.0f / 60.0f;
+
+        private static int ScreenWidthWorld = 50;
+        private static int ScreenHeightWorld = 40;
+
         public static void Main(string[] args)
+        {
+            GetDemos();
+            // just load the first one
+            LoadDemo(_demos[0]);
+
+            // vert buffers and stuff
+            CreateResources();
+            
+            // loopy loop
+            while (_window.Exists)
+            {
+                var snap = _window.PumpEvents();
+                if (_window.Exists)
+                {
+                    World.Step(tickTime);
+                    _ir.Update(tickTime, snap);
+                    DrawMenuBar();
+                    DrawInfoWindow();
+                    _currentDemo.DrawImgui();
+                    
+                    Render();
+                }
+            }
+        }
+
+        private static void CreateResources()
         {
             VeldridStartup.CreateWindowAndGraphicsDevice(
                 new WindowCreateInfo(50, 50, 1280, 720, WindowState.Normal, "Mirphys Testbed"),
@@ -40,36 +77,65 @@ namespace samples
                 _gd.MainSwapchain.Resize((uint) _window.Width, (uint) _window.Height);
                 _ir.WindowResized(_window.Width, _window.Height);
             };
-            
-            GetDemos();
-            // just load the first one
-            LoadDemo(_demos[0]);
 
-            // draw loop
-            while (_window.Exists)
+            VertexPositionColor[] quadVertices =
             {
-                var snapshot = _window.PumpEvents();
-                _ir.Update(tickTime, snapshot);
+                new VertexPositionColor(new Vector2(-.75f, .75f), RgbaFloat.Red),
+                new VertexPositionColor(new Vector2(.75f, .75f), RgbaFloat.Green),
+                new VertexPositionColor(new Vector2(-.75f, -.75f), RgbaFloat.Blue),
+                new VertexPositionColor(new Vector2(.75f, -.75f), RgbaFloat.Yellow)
+            };
+            BufferDescription vbDescription = new BufferDescription(
+                4 * VertexPositionColor.SizeInBytes,
+                BufferUsage.VertexBuffer);
+            _vBuff = _gd.ResourceFactory.CreateBuffer(vbDescription);
 
-                DrawMenuBar();
-                DrawInfoWindow();
-                _currentDemo.DrawImgui();
+            BufferDescription ibDescription = new BufferDescription(
+                4 * sizeof(ushort),
+                BufferUsage.IndexBuffer);
+            _iBuff = _gd.ResourceFactory.CreateBuffer(ibDescription);
+        }
 
-                _cl.Begin();
-                _cl.SetFramebuffer(_gd.MainSwapchain.Framebuffer);
-                _cl.ClearColorTarget(0, new RgbaFloat(0, 0, 0, 1f));
-                _ir.Render(_gd, _cl);
-                _cl.End();
-                _gd.SubmitCommands(_cl);
-                _gd.SwapBuffers(_gd.MainSwapchain);
+        private static void Render()
+        {
+            _cl.Begin();
+            _cl.SetFramebuffer(_gd.MainSwapchain.Framebuffer);
+            _cl.ClearColorTarget(0, RgbaFloat.Black);
+
+            foreach (Body b in World.Bodies)
+            {
+                if (b is RectBody)
+                {
+                    ushort[] quadIndices = { 0, 1, 2, 3 };
+                    _gd.UpdateBuffer(_iBuff, 0, quadIndices);
+                    DrawRect((RectBody)b);
+                }
             }
+            
+            _ir.Render(_gd, _cl);
+            _cl.End();
+            _gd.SubmitCommands(_cl);
+            _gd.SwapBuffers(_gd.MainSwapchain);
+        }
+
+        private static void DrawRect(RectBody b)
+        {
+            VertexPositionColor[] quadVertices =
+            {
+                new VertexPositionColor(new Vector2(-.75f, .75f), RgbaFloat.Red),
+                new VertexPositionColor(new Vector2(.75f, .75f), RgbaFloat.Green),
+                new VertexPositionColor(new Vector2(-.75f, -.75f), RgbaFloat.Blue),
+                new VertexPositionColor(new Vector2(.75f, -.75f), RgbaFloat.Yellow)
+            };
+            _gd.UpdateBuffer(_vBuff, 0, quadVertices);
+
         }
 
         private static void LoadDemo(IDemo demo)
         {
-            // todo: reset world, other stuff probably
             Console.WriteLine("Loading world for {0}", demo.Name);
-            demo.SetupWorld();
+            World.Clear();
+            demo.SetupWorld(World);
             _currentDemo = demo;
         }
 
@@ -116,6 +182,17 @@ namespace samples
                 ImGui.Spacing();
                 ImGui.TextWrapped(_currentDemo.Desc);
             }
+        }
+    }
+    struct VertexPositionColor
+    {
+        public const uint SizeInBytes = 24;
+        public Vector2 Position;
+        public RgbaFloat Color;
+        public VertexPositionColor(Vector2 position, RgbaFloat color)
+        {
+            Position = position;
+            Color = color;
         }
     }
 }

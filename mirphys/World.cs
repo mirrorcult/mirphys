@@ -5,8 +5,8 @@ namespace mirphys
 {
     public class World
     {
-        private List<Body> Bodies = new();
-        private List<Joint> Joints = new();
+        public List<Body> Bodies = new();
+        public List<Joint> Joints = new();
         private Dictionary<ArbiterKey, Arbiter> Arbiters = new();
         
         private int Iterations;

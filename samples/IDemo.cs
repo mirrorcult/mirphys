@@ -1,4 +1,5 @@
 ﻿using System;
+using mirphys;
 
 namespace samples
 {
@@ -6,7 +7,7 @@ namespace samples
     {
         string Name { get; }
         string Desc { get; }
-        void SetupWorld();
+        void SetupWorld(World w);
         void DrawImgui();
     }
 }

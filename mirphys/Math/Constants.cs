@@ -11,5 +11,7 @@ namespace mirphys
         // maybe?
         public const double RectangularInertiaDivisor = 1.0f / 12.0f;
         public const double CircularInertiaDivisor = Math.PI * (1.0f / 2.0f);
+
+        public const double NormalGravity = -3.0f;
     }
 }
