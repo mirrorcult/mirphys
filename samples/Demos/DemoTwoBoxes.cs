@@ -1,7 +1,8 @@
 ﻿using ImGuiNET;
 using mirphys;
+using mirphys.Bodies;
 
-namespace samples
+namespace samples.Demos
 {
     public class DemoTwoBoxes : IDemo
     {
@@ -10,8 +11,8 @@ namespace samples
         
         public void SetupWorld(World w)
         {
-            RectBody box1 = new RectBody(new(-5f, 5f), new(2.0f, 2.0f), 10);
-            RectBody box2 = new RectBody(new(5f, 5f), new(4.0f, 4.0f), 40);
+            RectBody box1 = new RectBody(new(-40f, 70f), new(4.0f, 4.0f), 40);
+            RectBody box2 = new RectBody(new(40f, 70f), new(4.0f, 4.0f), 40);
 
             w.Add(box1);
             w.Add(box2);

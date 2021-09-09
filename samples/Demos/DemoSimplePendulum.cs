@@ -1,6 +1,6 @@
 ﻿using mirphys;
 
-namespace samples
+namespace samples.Demos
 {
     public class DemoSimplePendulum : IDemo
     {

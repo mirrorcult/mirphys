@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace mirphys
+namespace mirphys.Bodies
 {
     public class Body
     {

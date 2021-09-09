@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using mirphys.Bodies;
 
 namespace mirphys
 {
@@ -23,12 +24,12 @@ namespace mirphys
 
         public void Add(Body b)
         {
-            Bodies.Append(b);
+            Bodies.Add(b);
         }
 
         public void Add(Joint j)
         {
-            Joints.Append(j);
+            Joints.Add(j);
         }
 
         public void Clear()

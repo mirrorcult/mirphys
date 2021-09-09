@@ -1,9 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Numerics;
+using System.Text;
+using System.Threading;
 using ImGuiNET;
 using mirphys;
+using mirphys.Bodies;
 using Veldrid;
+using Veldrid.OpenGLBinding;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 using Veldrid.SPIRV;
@@ -16,19 +23,26 @@ namespace samples
         private static GraphicsDevice _gd;
         private static CommandList _cl;
         private static ImGuiRenderer _ir;
+        private static BufferDescription _vbDescription;
         private static DeviceBuffer _vBuff;
         private static DeviceBuffer _iBuff;
         private static Shader[] _shaders;
-        private static Pipeline _pipeline;
+        private static Pipeline _pl;
 
-        private static List<IDemo> _demos = new();
+        private static readonly List<IDemo> _demos = new();
         private static IDemo _currentDemo;
 
         private static World World = new(new(0, mirphys.Constants.NormalGravity), 3);
-        private static float tickTime = 1.0f / 60.0f;
+        private static readonly float tickTime = 1.0f / 60.0f;
+        private static readonly TimeSpan tickTimeTs = TimeSpan.FromSeconds(tickTime);
 
-        private static int ScreenWidthWorld = 50;
-        private static int ScreenHeightWorld = 40;
+        // 16:9 because 1280x720 baybey
+        private static int ScreenWidthWorld = 160;
+        private static int ScreenHeightWorld = 90;
+
+        // yeah yeah yeah eat my ass im lazy
+        private const string VertexShaderPath = "../../../Shaders/basic.vert.glsl";
+        private const string FragmentShaderPath = "../../../Shaders/basic.frag.glsl";
 
         public static void Main(string[] args)
         {
@@ -42,7 +56,16 @@ namespace samples
             // loopy loop
             while (_window.Exists)
             {
+                var st = new Stopwatch();
+                st.Start();
                 var snap = _window.PumpEvents();
+                foreach (var ev in snap.KeyEvents)
+                {
+                    if (ev.Key == Key.Escape)
+                    { 
+                        Environment.Exit(0);
+                    }
+                }
                 if (_window.Exists)
                 {
                     World.Step(tickTime);
@@ -53,6 +76,15 @@ namespace samples
                     
                     Render();
                 }
+
+                st.Stop();
+                
+                if (st.Elapsed > tickTimeTs)
+                {
+                    // tough shit I guess we can't hit 60 fps so we won't wait
+                    continue;
+                }
+                Thread.Sleep(tickTimeTs - st.Elapsed);
             }
         }
 
@@ -77,23 +109,56 @@ namespace samples
                 _gd.MainSwapchain.Resize((uint) _window.Width, (uint) _window.Height);
                 _ir.WindowResized(_window.Width, _window.Height);
             };
-
-            VertexPositionColor[] quadVertices =
-            {
-                new VertexPositionColor(new Vector2(-.75f, .75f), RgbaFloat.Red),
-                new VertexPositionColor(new Vector2(.75f, .75f), RgbaFloat.Green),
-                new VertexPositionColor(new Vector2(-.75f, -.75f), RgbaFloat.Blue),
-                new VertexPositionColor(new Vector2(.75f, -.75f), RgbaFloat.Yellow)
-            };
-            BufferDescription vbDescription = new BufferDescription(
+                
+            _vbDescription = new BufferDescription(
                 4 * VertexPositionColor.SizeInBytes,
                 BufferUsage.VertexBuffer);
-            _vBuff = _gd.ResourceFactory.CreateBuffer(vbDescription);
+            _vBuff = _gd.ResourceFactory.CreateBuffer(_vbDescription);
 
-            BufferDescription ibDescription = new BufferDescription(
+            var ibDescription = new BufferDescription(
                 4 * sizeof(ushort),
                 BufferUsage.IndexBuffer);
             _iBuff = _gd.ResourceFactory.CreateBuffer(ibDescription);
+            
+            var vertexLayout = new VertexLayoutDescription(
+                new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
+                new VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4));
+
+            var vertexShaderDesc = new ShaderDescription(
+                ShaderStages.Vertex,
+                File.ReadAllBytes(VertexShaderPath),
+                "main");
+            var fragmentShaderDesc = new ShaderDescription(
+                ShaderStages.Fragment,
+                File.ReadAllBytes(FragmentShaderPath),
+                "main");
+
+            _shaders = _gd.ResourceFactory.CreateFromSpirv(vertexShaderDesc, fragmentShaderDesc);
+            
+            GraphicsPipelineDescription pipelineDescription = new GraphicsPipelineDescription();
+            pipelineDescription.BlendState = BlendStateDescription.SingleOverrideBlend;
+
+            pipelineDescription.DepthStencilState = new DepthStencilStateDescription(
+                depthTestEnabled: true,
+                depthWriteEnabled: true,
+                comparisonKind: ComparisonKind.LessEqual);
+
+            pipelineDescription.RasterizerState = new RasterizerStateDescription(
+                cullMode: FaceCullMode.Back,
+                fillMode: PolygonFillMode.Solid,
+                frontFace: FrontFace.Clockwise,
+                depthClipEnabled: true,
+                scissorTestEnabled: false);
+
+            pipelineDescription.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+            pipelineDescription.ResourceLayouts = System.Array.Empty<ResourceLayout>();
+
+            pipelineDescription.ShaderSet = new ShaderSetDescription(
+                vertexLayouts: new VertexLayoutDescription[] { vertexLayout },
+                shaders: _shaders);
+
+            pipelineDescription.Outputs = _gd.SwapchainFramebuffer.OutputDescription;
+            _pl = _gd.ResourceFactory.CreateGraphicsPipeline(pipelineDescription);
         }
 
         private static void Render()
@@ -101,13 +166,12 @@ namespace samples
             _cl.Begin();
             _cl.SetFramebuffer(_gd.MainSwapchain.Framebuffer);
             _cl.ClearColorTarget(0, RgbaFloat.Black);
+            _cl.SetPipeline(_pl);
 
             foreach (Body b in World.Bodies)
             {
                 if (b is RectBody)
                 {
-                    ushort[] quadIndices = { 0, 1, 2, 3 };
-                    _gd.UpdateBuffer(_iBuff, 0, quadIndices);
                     DrawRect((RectBody)b);
                 }
             }
@@ -120,15 +184,30 @@ namespace samples
 
         private static void DrawRect(RectBody b)
         {
-            VertexPositionColor[] quadVertices =
+            // ???
+            var buff = _gd.ResourceFactory.CreateBuffer(_vbDescription);
+            _cl.SetVertexBuffer(0, buff);
+            _cl.SetIndexBuffer(_iBuff, IndexFormat.UInt16, 0);
+            
+            ushort[] quadIndices = { 0, 1, 2, 3 };
+            _gd.UpdateBuffer(_iBuff, 0, quadIndices);
+            
+            VertexPositionColor[] vertices =
             {
-                new VertexPositionColor(new Vector2(-.75f, .75f), RgbaFloat.Red),
-                new VertexPositionColor(new Vector2(.75f, .75f), RgbaFloat.Green),
-                new VertexPositionColor(new Vector2(-.75f, -.75f), RgbaFloat.Blue),
-                new VertexPositionColor(new Vector2(.75f, -.75f), RgbaFloat.Yellow)
+                // test
+                new VertexPositionColor(WorldToScreen(b.TopLeft), RgbaFloat.White),
+                new VertexPositionColor(WorldToScreen(b.TopRight), RgbaFloat.White),
+                new VertexPositionColor(WorldToScreen(b.BottomLeft), RgbaFloat.White),
+                new VertexPositionColor(WorldToScreen(b.BottomRight), RgbaFloat.White)
             };
-            _gd.UpdateBuffer(_vBuff, 0, quadVertices);
+            _gd.UpdateBuffer(buff, 0, vertices);
 
+            _cl.DrawIndexed(
+                indexCount: 4,
+                instanceCount: 1,
+                indexStart: 0,
+                vertexOffset: 0,
+                instanceStart: 0);
         }
 
         private static void LoadDemo(IDemo demo)
@@ -139,6 +218,8 @@ namespace samples
             _currentDemo = demo;
         }
 
+        // should i just be registering types or something instead of copious amounts of reflection? yes, but idc
+        // cause this only runs once
         private static void GetDemos()
         {
             var demos = Helpers.GetImplementationsOf<IDemo>();
@@ -182,6 +263,16 @@ namespace samples
                 ImGui.Spacing();
                 ImGui.TextWrapped(_currentDemo.Desc);
             }
+        }
+
+        // dumb ass its literally 90 / 2 thats just 45. figure it out rider
+        [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
+        private static Vector2 WorldToScreen(Vec2 w)
+        {
+            // see funny ms paint drawing in assets
+            var y = (w.Y - ScreenHeightWorld / 2) / (ScreenHeightWorld / 2);
+            var x = w.X / ScreenWidthWorld;
+            return new Vector2((float)x, (float)y);
         }
     }
     struct VertexPositionColor
